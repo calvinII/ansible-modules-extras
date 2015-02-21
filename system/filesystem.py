@@ -41,6 +41,12 @@ options:
     description:
     - If yes, allows to create new filesystem on devices that already has filesystem.
     required: false
+  reformat:
+    choices: [ "yes", "no" ]
+    default: "no"
+    description:
+    - If yes, reformats the storage and eliminates all existing data
+    required: false
   opts:
     description:
     - List of options to be passed to mkfs command.
@@ -63,6 +69,7 @@ def main():
             dev=dict(required=True, aliases=['device']),
             opts=dict(),
             force=dict(type='bool', default='no'),
+            reformat=dict(type='bool', default='no'),
         ),
         supports_check_mode=True,
     )
@@ -71,6 +78,7 @@ def main():
     fstype = module.params['fstype']
     opts = module.params['opts']
     force = module.boolean(module.params['force'])
+    reformat = module.boolean(module.params['reformat'])
 
     changed = False
 
@@ -82,11 +90,11 @@ def main():
     rc,raw_fs,err = module.run_command("%s -c /dev/null -o value -s TYPE %s" % (cmd, dev))
     fs = raw_fs.strip()
 
-
-    if fs == fstype:
-        module.exit_json(changed=False)
-    elif fs and not force:
-        module.fail_json(msg="'%s' is already used as %s, use force=yes to overwrite"%(dev,fs), rc=rc, err=err)
+    if not reformat:
+        if fs == fstype:
+            module.exit_json(changed=False)
+        elif fs and not force:
+            module.fail_json(msg="'%s' is already used as %s, use force=yes to overwrite"%(dev,fs), rc=rc, err=err)
 
     ### create fs
 
