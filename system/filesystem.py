@@ -41,11 +41,11 @@ options:
     description:
     - If yes, allows to create new filesystem on devices that already has filesystem.
     required: false
-  reformat:
+  force_reformat:
     choices: [ "yes", "no" ]
     default: "no"
     description:
-    - If yes, reformats the storage and eliminates all existing data
+    - If yes, reformats the storage even if there is already the right filesystem on the device.
     required: false
   opts:
     description:
@@ -69,7 +69,7 @@ def main():
             dev=dict(required=True, aliases=['device']),
             opts=dict(),
             force=dict(type='bool', default='no'),
-            reformat=dict(type='bool', default='no'),
+            force_reformat=dict(type='bool', default='no'),
         ),
         supports_check_mode=True,
     )
@@ -78,7 +78,7 @@ def main():
     fstype = module.params['fstype']
     opts = module.params['opts']
     force = module.boolean(module.params['force'])
-    reformat = module.boolean(module.params['reformat'])
+    force_reformat = module.boolean(module.params['reformat'])
 
     changed = False
 
@@ -90,7 +90,8 @@ def main():
     rc,raw_fs,err = module.run_command("%s -c /dev/null -o value -s TYPE %s" % (cmd, dev))
     fs = raw_fs.strip()
 
-    if not reformat:
+# skip check of existing Filesystem if we want to force the mkfs action
+    if not force_reformat:
         if fs == fstype:
             module.exit_json(changed=False)
         elif fs and not force:
